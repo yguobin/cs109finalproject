@@ -23,7 +23,36 @@ def save_all_stocks_data():
 	for exchange in ['NASDAQ', 'NYSE']:
 		for symbol in load_symbols(exchange)['Symbol']:
 			save_stock_data(symbol)
-
+			
+def leaf_node(n):
+	while n.children is not None and len(n.children) > 0 and n.children[0].type == 'element':
+		n = n.children[0]
+	return n
+			
+def save_analyst_opinion_data(symbol):
+	try:
+		url = "http://finance.yahoo.com/q/ud?s=" + symbol
+		page = web.DOM(requests.get(url).text)
+		data = page('table.yfnc_datamodoutline1 tr table tr')
+		if len(data) > 1:
+			columns = [leaf_node(n).content for n in data[0].children]
+			entries = []
+			for i in range(1, len(data)):
+				entries.append([leaf_node(n).content for n in data[i].children])
+			df = pd.DataFrame(entries, columns=columns)
+			format = "%d-%b-%y"
+			df['Date'] = pd.to_datetime(df['Date'], format=format)
+			df = df.set_index('Date').sort_index(ascending=False)
+			df.to_csv('data/analyst_opinion/' + symbol + '.txt')			
+	except Exception:
+		print "Unable to download analyst_opinion for %s" % symbol
+		raise
+		
+def save_all_analyst_opinion_data():		
+	for exchange in ['NASDAQ', 'NYSE']:
+		for symbol in load_symbols(exchange)['Symbol']:
+			save_analyst_opinion_data(symbol)
+			
 def save_all_stock_info():
 	f = open('data/stock_info.csv', 'w')
 	f.write("MarketCap,'PE','EPS','Dividend','DividentPct'\n")
