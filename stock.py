@@ -46,7 +46,6 @@ def save_analyst_opinion_data(symbol):
 			df.to_csv('data/analyst_opinion/' + symbol + '.txt')			
 	except Exception:
 		print "Unable to download analyst_opinion for %s" % symbol
-		raise
 		
 def save_all_analyst_opinion_data():		
 	for exchange in ['NASDAQ', 'NYSE']:
