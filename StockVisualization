@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head><title>Stock Calendar</title></head>
+<style>
+
+body {
+  font-family: Arial, sans-serif;
+  shape-rendering: crispEdges;
+ 
+}
+
+.day {
+  fill: #fff;
+  stroke: #ccc;
+}
+
+.month {
+  fill: none;
+  stroke: #aaa;
+  stroke-width: 2px;
+}
+
+.leftData, .topData, .legendText{
+	font-size: 11px;
+	fill: #666;
+}
+
+.year{
+	 stroke: #999;
+	 stroke-width: 1;
+	 fill: #e5e5e5;
+}
+.yearText{
+	writing-mode: tb; 
+	glyph-orientation-vertical: 0;
+	font-size: 20px;
+}
+.topData {
+	
+}
+rect{
+	
+	stroke: #ccc;
+}
+
+.legendBox{
+	position: fixed;
+	margin-top: 10px;
+	margin-left: 10px;
+}
+
+.mainContainer{
+	 padding: 10px 30px 10px 10px;
+}
+
+.graphTitle{
+	font-size: 26px;
+	font-family: Myriad Pro, Arial;
+	position: fixed;
+	
+}
+
+.calendarSVGBox{
+	margin-top: 30px;
+}
+</style>
+<body>
+
+<div class="mainContainer">
+	<div class="graphTitle">Stock Heat Map - Monthly</div>
+	<div class="calendarSVGBox"></div>
+</div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width,
+    height,
+    cellSize = 15, // cell size
+	leftPadding = 50,
+	topPadding = 50,
+	yearStart = 2012,
+	yearEnd = 2013;
+
+var legend = [
+	// 0.8 0.4 0.1 0.05 0.005 -0.005 -0.05 -0.1 -0.4 -0.8 (red)
+	// #006635 #1a964e #66ba63 #a5d669 #d8ed8a #fcfcbd #fcde8b #faab61 #f26d44 #d42f26
+	{ color: "#006635", condition: ">= 0.8"},
+	{ color: "#1a964e", condition: ">= 0.4 && < 0.8"},
+	{ color: "#66ba63", condition: ">= 0.1 && < 0.4"},
+	{ color: "#a5d669", condition: ">= 0.05 && < 0.1"},
+	{ color: "#d8ed8a", condition: ">= 0.005 && < 0.05"},
+	{ color: "#fcfcbd", condition: ">= -0.005 && < 0.005"},
+	{ color: "#fcde8b", condition: ">= -0.05 && < -0.005"},
+	{ color: "#faab61", condition: ">= -0.1 && < -0.05"},
+	{ color: "#f26d44", condition: ">= -0.4 && < -0.1"},
+	{ color: "#d42f26", condition: ">= -0.8 && < -0.4"}
+];
+
+	
+d3.csv("SP500.csv", function(error, stocks, count) {
+	width = cellSize*(stocks.length)+10+leftPadding;
+	height = (yearEnd+1-yearStart)*(12*cellSize+2)+topPadding;
+	
+	
+	var svg = d3.select(".calendarSVGBox").append("svg")
+		.attr("width", width)
+		.attr("height", height)
+		
+	var stockList = svg.selectAll('svg').append('g')
+			.attr("width" , width)
+			.attr("height" , topPadding)
+			.attr("transform", "translate(" + leftPadding + "," + 0 + ")")
+	
+	stockList.data(stocks)
+		.enter().append('text')
+		.text(function(data, index) { 
+			
+			return data.Symbol; 
+		})
+		.attr("class" , "topData")
+		.attr("y", 0)
+		.attr("transform", function(data, index) { 
+			var rotationAngle;
+			var pos1 = 80;
+			index = index;
+			pos1 = pos1+((cellSize/2)*index);
+			
+			var pos2 = 18;
+			pos2 = pos2-((cellSize/2)*index);
+			return "rotate(-90 "+pos1+" "+pos2+")";; 
+		})
+		.attr("x", topPadding)
+	
+	
+	var g_year = svg.selectAll('svg').data(d3.range(yearStart,yearEnd+1))
+		.enter().append('g')
+		.attr("id", function(index) { return  "year_"+index})
+		.attr("transform", function(year, index) {
+			return "translate(" + 0 + "," + ((index*(cellSize*12))+topPadding) + ")"; 
+	})
+	
+	g_year.append('rect')
+		.attr("width" , width)
+		.attr("height" , (cellSize*12)+2)
+		.attr("x" , 0)
+		.attr("y" , 1)
+		.attr("class", "year")
+		
+	g_year.append('text')
+		.text(function(year, index) { 
+			return year; 
+		})
+		.attr("class", "yearText")
+		.attr("x", 10)
+		.attr("y", 5)
+
+	
+	var g_month = g_year.selectAll('g').data(d3.range(0,12))
+		.enter().append('g')
+		.attr("width" , width)
+		.attr("height" , cellSize)
+		.attr("transform", function(rangeIndex) { 
+			return "translate(" + 0 + "," + (rangeIndex*cellSize) + ")"
+		})
+		.attr("class" ,function(index) {
+			var date = new Date();
+			date.setMonth(index);
+			var monthText = d3.time.format("%b");
+			date = monthText(date);
+			return date;
+		})
+		
+	g_month.append('text')
+		.text(function(index) { 
+			var date = new Date();
+			date.setMonth(index);
+			var monthText = d3.time.format("%b");
+			date = monthText(date);
+			return date; 
+		})
+		.attr("y", function(index) { 
+			return cellSize-4; 
+		})
+		.attr("x", 25)
+		.attr("class", "leftData");
+	
+	g_month.selectAll('g').data(stocks)
+		.enter().append('rect')
+		.attr("width" , cellSize)
+		.attr("height" , cellSize)
+		.attr("fill", "#fff")
+		.attr("class" ,function(data, index) {return data.Symbol;})
+		.attr("x", function(data, index) { 
+			
+			return (index*cellSize)+leftPadding; 
+		})
+		.attr("y", 2)
+	
+	
+	
+	// Populate cells
+	d3.csv("SP500_returns.csv", function(error, stockData, count) {
+		// 2012-10-01
+		
+		
+		var data123 = d3.nest()
+			.key(function(d) { 
+				return d.Date; 
+			})
+			.rollup(function(d) { 
+				return (d[0].Close - d[0].Open) / d[0].Open; 
+			})
+			.map(stockData);
+		
+		stockData.forEach(function(stocks, index) {
+			var format = d3.time.format("%Y-%m-%d");
+			var stockDate = format.parse(stocks.Date); 
+			
+			var fetchMonth = d3.time.format("%b");
+			var fetchYear = d3.time.format("%Y");
+			var stockMonth = fetchMonth(stockDate);
+			var stockYear = fetchYear(stockDate);
+			
+			
+		
+			for (var stock in stocks) {
+				if (stocks.hasOwnProperty(stock)) {
+					if(stock != 'Date'){
+						//console.log(stock + " -> " + stocks[stock]);
+						var cell = d3.select("#year_"+stockYear).select("."+stockMonth).select("."+stock);
+						cell.attr("fill", fillColor(stocks[stock]));
+						cell.append("title")
+							.text(stock+"\n"+stockMonth+" "+stockYear+"\n"+ stocks[stock]);
+					}
+				}
+			}
+			
+			
+		});
+	});
+	
+	
+	var legendSVG = d3.select(".calendarSVGBox").append("div")
+		.attr("class", "legendBox")
+			.append('svg')
+				.attr("width", 300)
+				.attr("height", 200)
+	
+	var g_legendItem = legendSVG.selectAll('g').data(legend)
+		.enter().append('g')
+		
+	g_legendItem.append('rect')
+		.attr('width', cellSize)
+		.attr('height', cellSize)
+		.attr('fill', function(data, index) {
+			return data.color;
+		})
+		.attr('x', 0)
+		.attr('y', function(data, index) {
+			return (index*cellSize)+(2*index);
+		})
+		
+	g_legendItem.append('text')
+		.attr('height', cellSize)
+		.text(function(data, index) {
+			return data.condition;
+		})
+		.attr('class', "legendText")
+		.attr('x', cellSize + 10)
+		.attr('y', function(data, index) {
+			return (index*cellSize)+(2*index)+(cellSize-3);
+	})
+});
+
+function fillColor(value){
+	// 0.8 0.4 0.1 0.05 0.005 -0.005 -0.05 -0.1 -0.4 -0.8 (red)
+	// #006635 #1a964e #66ba63 #a5d669 #d8ed8a #fcfcbd #fcde8b #faab61 #f26d44 #d42f26
+	value = parseFloat(value);
+	var color = "";
+	switch(true)
+	{
+		case (value >= 0.8):
+			color = legend[0].color;
+			break;
+		  
+		case (value >= 0.4 && value < 0.8):
+			color = legend[1].color;
+			break;
+		
+		case (value >= 0.1 && value < 0.4):
+			color = legend[2].color
+			break;
+		
+		case (value >= 0.05 && value < 0.1):
+			color = legend[3].color;
+			break;
+		
+		case (value >= 0.005 && value < 0.05):
+			color = legend[4].color;
+			break;
+		
+		case (value >= -0.005 && value < 0.005):
+			color = legend[5].color;
+			break;
+			
+		case (value >= -0.05 && value < -0.005):
+			color = legend[6].color;
+			break;
+		
+		case (value >= -0.1 && value < -0.05):
+			color = legend[7].color;
+			break;
+		
+		case (value >= -0.4 && value < -0.1):
+			color = legend[8].color;
+			break;
+		
+		case (value >= -0.8 && value < -0.4):
+			color = legend[9].color;
+			break;
+		
+		default:
+			color = "#ffffff";
+		
+	}
+	
+	
+	return color;
+}
+
+</script>
+</body>
+</html>
